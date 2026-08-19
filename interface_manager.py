@@ -268,7 +268,7 @@ class InterfaceApp:
 
         self._load_css()
 
-        self.window = Gtk.Window(title="Studio Interface Manager")
+        self.window = Gtk.Window(title="Universal Control - Studio 1824c")
         self.window.set_border_width(0)
         self.window.connect("destroy", self._on_destroy)
         self.window.set_default_size(1100, 700)
