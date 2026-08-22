@@ -77,15 +77,18 @@ CSS = """
 window { background-color: #14141a; color: #e6e6ec; }
 .header-bar { background-color: #1d1d27; color: #e6e6ec; border-bottom: 1px solid #2c2c38; }
 frame { background-color: #20202b; border: 1px solid #303040; border-radius: 8px; }
-frame > label { color: #7fb0ff; font-weight: bold; padding: 2px 6px; }
+frame > label { color: #a0d0ff; font-weight: bold; font-size: 12px; padding: 2px 6px; }
 GtkLabel { color: #c9c9d4; }
 .tiny { color: #8a8a96; font-size: 10px; }
 GtkButton { background-color: #2b2b37; color: #e6e6ec; border-radius: 6px;
             border: 1px solid #3a3a48; padding: 6px 10px; }
 GtkButton:hover { background-color: #343443; }
-GtkToggleButton:checked { background-color: #3a6ea5; color: #ffffff; border-color: #4a82c4; }
+GtkToggleButton { color: #666674; border: 2px solid #3a3a48;
+                  min-width: 80px; min-height: 32px; background-color: #2b2b37; }
+GtkToggleButton:checked { background-color: #2a7a3a; color: #ffffff;
+                          border-color: #3aaa4a; font-weight: bold; }
 .mix-btn { padding: 8px 12px; font-weight: bold; }
-.mix-btn:checked { background-color: #2f5d8a; }
+.mix-btn:checked { background-color: #2f5d8a; border-color: #4a82c4; }
 .send-strip { background-color: #1b1b24; border: 1px solid #2a2a36;
               border-radius: 6px; padding: 5px; }
 .master-strip { background-color: #23232f; border: 1px solid #3a3a4c;
@@ -100,7 +103,6 @@ GtkScale slider:hover { background-color: #e0e0ee; }
 GtkComboBox { background-color: #2b2b37; color: #e6e6ec; }
 GtkInfoBar { background-color: #3a2f1a; color: #ffd9a0; }
 GtkCheckButton { color: #c9c9d4; }
-.ms-btn { padding: 1px 5px; font-size: 9px; font-weight: bold; }
 """
 
 
@@ -196,29 +198,70 @@ def _card_label(card_id, fallback):
 def _make_card_icon_surface(card_id, card_num, label, is_webcam=False):
     try:
         from cairo import ImageSurface, FORMAT_ARGB32, Context
+        pi = 3.14159265
         size = 64
         surface = ImageSurface(FORMAT_ARGB32, size, size)
         ctx = Context(surface)
         color_hex = _card_color(card_id, card_num)
-        r = int(color_hex[1:3], 16) / 255.0
-        g = int(color_hex[3:5], 16) / 255.0
-        b = int(color_hex[5:7], 16) / 255.0
-        ctx.set_source_rgb(r, g, b)
-        ctx.arc(size / 2, size / 2, size / 2 - 2, 0, 2 * 3.14159)
+        cr = int(color_hex[1:3], 16) / 255.0
+        cg = int(color_hex[3:5], 16) / 255.0
+        cb = int(color_hex[5:7], 16) / 255.0
+
+        ctx.set_source_rgb(0.12, 0.12, 0.16)
+        ctx.rectangle(0, 0, size, size)
         ctx.fill()
-        if is_webcam:
-            ctx.set_source_rgb(1.0, 1.0, 1.0)
-            ctx.select_font_face("Sans", 0, 0)
-            ctx.set_font_size(26)
-            ctx.move_to(size / 2 - 14, size / 2 + 10)
-            ctx.show_text("\N{VIDEO CAMERA}")
+        ctx.set_line_width(1.5)
+        ctx.set_source_rgb(cr * 0.6, cg * 0.6, cb * 0.6)
+        ctx.rectangle(2, 2, size - 4, size - 4)
+        ctx.stroke()
+
+        ctx.set_source_rgb(cr, cg, cb)
+        ctx.rectangle(8, 6, size - 16, 2)
+        ctx.fill()
+
+        for i in range(4):
+            x = 14 + i * 11
+            ctx.set_source_rgb(0.2, 0.2, 0.25)
+            ctx.arc(x, 24, 5, 0, 2 * pi)
+            ctx.fill()
+            ctx.set_source_rgb(cr * 0.8, cg * 0.8, cb * 0.8)
+            ctx.arc(x, 24, 4, 0, 2 * pi)
+            ctx.stroke()
+            ctx.set_source_rgb(cr, cg, cb)
+            ctx.arc(x, 24, 1.5, 0, 2 * pi)
+            ctx.fill()
+            angle = -pi / 2 + i * pi / 3
+            ctx.set_source_rgb(1, 1, 1)
+            ctx.set_line_width(1)
+            ctx.move_to(x + 1.5 * pi, 24 + 1.5 * pi)
+            ctx.line_to(x + 3.5 * pi, 24 + 3.5 * pi)
+            ctx.stroke()
+
+        for i in range(8):
+            x = 10 + i * 7
+            h = 6 + (i * 3 + card_num * 2) % 10
+            ctx.set_source_rgb(cr, cg, cb)
+            ctx.rectangle(x, 42, 3, h)
+            ctx.fill()
+
+        ctx.set_source_rgb(cr, cg, cb)
+        ctx.rectangle(8, size - 10, size - 16, 2)
+        ctx.fill()
+
         ctx.set_source_rgb(1.0, 1.0, 1.0)
         ctx.select_font_face("Sans", 0, 1)
-        ctx.set_font_size(14)
-        short = _card_label(card_id, label).split()[0][:6]
+        ctx.set_font_size(10)
+        short = _card_label(card_id, label).split()[0][:8]
         ext = ctx.text_extents(short)
-        ctx.move_to(size / 2 - ext.width / 2, size / 2 + ext.height / 3)
+        ctx.move_to(size / 2 - ext.width / 2, 58)
         ctx.show_text(short)
+
+        if is_webcam:
+            ctx.set_source_rgb(1.0, 0.3, 0.3)
+            ctx.set_font_size(18)
+            ctx.move_to(size / 2 - 8, size / 2 + 6)
+            ctx.show_text("\N{VIDEO CAMERA}")
+
         cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".card_icons")
         os.makedirs(cache_dir, exist_ok=True)
         safe_id = card_id.replace("/", "_").replace(":", "_")
@@ -265,10 +308,11 @@ class InterfaceApp:
         self.route_name = ""
         self.route_enabled = False
         self._skip_welcome = False
+        self._w_auto = False
 
         self._load_css()
 
-        self.window = Gtk.Window(title="Universal Control - Studio 1824c")
+        self.window = Gtk.Window(title="Universal Interface Control")
         self.window.set_border_width(0)
         self.window.connect("destroy", self._on_destroy)
         self.window.set_default_size(1100, 700)
@@ -305,30 +349,17 @@ class InterfaceApp:
 
         title = Gtk.Label()
         title.set_markup('<span size="xx-large" weight="bold" color="#7fb0ff">'
-                         'Studio 1824c Setup</span>')
+                         'Universal Interface Control</span>')
         vbox.pack_start(title, False, False, 0)
 
-        sub = Gtk.Label(label="Select your cards, aggregate mode, and device.")
+        sub = Gtk.Label(label="Detected devices")
         sub.get_style_context().add_class("tiny")
         vbox.pack_start(sub, False, False, 0)
 
-        # --- Primary Card ---
-        grp = Gtk.Frame(label="Primary Card")
-        grp.set_border_width(4)
-        inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        inner.set_border_width(8)
-
-        self._w_card_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        self._w_card_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        self._w_card_box.set_halign(Gtk.Align.CENTER)
         self._w_card_btns = {}
         self._w_selected = None
-
-        none_btn = Gtk.ToggleButton(label="None")
-        none_btn.set_relief(Gtk.ReliefStyle.NORMAL)
-        none_btn.set_tooltip_text("No card selected")
-        none_btn.set_active(True)
-        none_btn.connect("toggled", self._w_on_card_select, None)
-        self._w_card_box.add(none_btn)
-        self._w_card_btns[None] = none_btn
 
         for i, c in enumerate(self.alsa_cards):
             icon_path = _make_card_icon_surface(c["id"], i, c["name"], c["is_webcam"])
@@ -342,57 +373,44 @@ class InterfaceApp:
             else:
                 btn.set_label(_card_label(c["id"], c["label"][:12]))
             btn.set_relief(Gtk.ReliefStyle.NORMAL)
+            btn.set_size_request(90, 80)
             tip = "%s\nhw: %s\n%s" % (c["label"], c["hw"], c["dev_name"])
             if c["is_webcam"]:
-                tip += "\n[WEBCAM] mic disabled in program"
+                tip += "\n[WEBCAM]"
             btn.set_tooltip_text(tip)
             btn.connect("toggled", self._w_on_card_select, c["hw"])
             self._w_card_box.add(btn)
             self._w_card_btns[c["hw"]] = btn
 
-        inner.add(self._w_card_box)
+        vbox.pack_start(self._w_card_box, False, False, 8)
 
         self._w_card_info = Gtk.Label(label="No card selected")
         self._w_card_info.get_style_context().add_class("tiny")
-        inner.add(self._w_card_info)
+        vbox.pack_start(self._w_card_info, False, False, 0)
 
-        cust_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         cust = Gtk.Button(label="Customize Cards...")
         cust.connect("clicked", self._w_customize_cards)
-        cust_row.add(cust)
-        inner.add(cust_row)
+        vbox.pack_start(cust, False, False, 0)
 
-        grp.add(inner)
-        vbox.pack_start(grp, False, False, 0)
-
-        # --- Aggregate ---
-        agg = Gtk.Frame(label="Aggregate / Link")
-        agg.set_border_width(4)
-        agg_inner = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        agg_inner.set_border_width(8)
-
-        agg_inner.add(Gtk.Label(label="2nd Card:"))
+        chain_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        chain_row.set_halign(Gtk.Align.CENTER)
+        chain_lbl = Gtk.Label()
+        chain_lbl.set_markup('<span size="large" color="#888">\u26d3 Aggregate</span>')
+        chain_row.add(chain_lbl)
         self._w_link_combo = Gtk.ComboBoxText()
         self._w_link_combo.append_text("None")
         for c in self.alsa_cards:
             self._w_link_combo.append_text(c["label"])
         self._w_link_combo.set_active(0)
-        agg_inner.add(self._w_link_combo)
-
-        self._w_mix_cb = Gtk.CheckButton(label="Mix (aggregate)")
+        chain_row.add(self._w_link_combo)
+        self._w_mix_cb = Gtk.CheckButton(label="Mix")
         self._w_mix_cb.set_active(True)
-        agg_inner.add(self._w_mix_cb)
+        chain_row.add(self._w_mix_cb)
+        vbox.pack_start(chain_row, False, False, 0)
 
-        agg.add(agg_inner)
-        vbox.pack_start(agg, False, False, 0)
-
-        # --- Device Settings ---
-        dev = Gtk.Frame(label="Device")
-        dev.set_border_width(4)
-        dev_inner = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        dev_inner.set_border_width(8)
-
-        dev_inner.add(Gtk.Label(label="Clock:"))
+        dev_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        dev_row.set_halign(Gtk.Align.CENTER)
+        dev_row.add(Gtk.Label(label="Clock:"))
         self._w_clock_combo = Gtk.ComboBoxText()
         for n in ("Internal", "S/PDIF", "ADAT"):
             self._w_clock_combo.append_text(n)
@@ -402,111 +420,63 @@ class InterfaceApp:
             self._w_clock_combo.set_active(cur)
         except Exception:
             self._w_clock_combo.set_active(0)
-        dev_inner.add(self._w_clock_combo)
-
-        dev_inner.add(Gtk.Label(label="Rate:"))
+        dev_row.add(self._w_clock_combo)
+        dev_row.add(Gtk.Label(label="Rate:"))
         self._w_rate_combo = Gtk.ComboBoxText()
         for r in (44100, 48000, 96000, 192000):
             self._w_rate_combo.append_text("%d" % r)
         self._w_rate_combo.set_active(1)
-        dev_inner.add(self._w_rate_combo)
+        dev_row.add(self._w_rate_combo)
+        vbox.pack_start(dev_row, False, False, 0)
 
-        dev.add(dev_inner)
-        vbox.pack_start(dev, False, False, 0)
-
-        # --- VirtuaDAW Wires ---
-        wd = Gtk.Frame(label="VirtuaDAW Wires")
-        wd.set_border_width(4)
-        wd_inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        wd_inner.set_border_width(8)
-
-        self._w_wire_list = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
-        wd_inner.add(self._w_wire_list)
-
-        wire_add = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
-        self._w_wire_src = Gtk.ComboBoxText()
-        self._w_wire_src.append_text("Pri")
-        self._w_wire_src.append_text("Link")
-        for c in self.alsa_cards:
-            self._w_wire_src.append_text(c["id"])
-        self._w_wire_src.set_active(0)
-        wire_add.add(self._w_wire_src)
-        self._w_wire_src_ch = Gtk.ComboBoxText()
-        for i in range(1, 19):
-            self._w_wire_src_ch.append_text("O%d" % i)
-        self._w_wire_src_ch.set_active(0)
-        wire_add.add(self._w_wire_src_ch)
-        wire_add.add(Gtk.Label(label="\u2192"))
-        self._w_wire_dst = Gtk.ComboBoxText()
-        self._w_wire_dst.append_text("Pri")
-        self._w_wire_dst.append_text("Link")
-        for c in self.alsa_cards:
-            self._w_wire_dst.append_text(c["id"])
-        self._w_wire_dst.set_active(0)
-        wire_add.add(self._w_wire_dst)
-        self._w_wire_dst_ch = Gtk.ComboBoxText()
-        for i in range(1, 19):
-            self._w_wire_dst_ch.append_text("I%d" % i)
-        self._w_wire_dst_ch.set_active(0)
-        wire_add.add(self._w_wire_dst_ch)
-        wadd = Gtk.Button(label="+")
-        wadd.set_size_request(28, -1)
-        wadd.connect("clicked", self._w_add_wire)
-        wire_add.add(wadd)
-        wclr = Gtk.Button(label="Clr")
-        wclr.connect("clicked", self._w_clear_wires)
-        wire_add.add(wclr)
-        wd_inner.add(wire_add)
-
-        wd.add(wd_inner)
-        vbox.pack_start(wd, False, False, 0)
-
-        # --- NDI ---
-        ndi = Gtk.Frame(label="NDI")
-        ndi.set_border_width(4)
-        ndi_inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        ndi_inner.set_border_width(8)
-
-        ndi_r1 = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        ndi_r1.add(Gtk.Label(label="In:"))
+        ndi_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        ndi_row.set_halign(Gtk.Align.CENTER)
+        ndi_row.add(Gtk.Label(label="NDI In:"))
         self._w_ndi_in = Gtk.Entry()
         self._w_ndi_in.set_placeholder_text("ndi://host/source")
         self._w_ndi_in.set_text(self.net_source)
-        ndi_r1.add(self._w_ndi_in)
+        self._w_ndi_in.set_size_request(180, -1)
+        ndi_row.add(self._w_ndi_in)
         self._w_ndi_in_cb = Gtk.CheckButton(label="Enable")
         self._w_ndi_in_cb.set_active(self.net_enabled)
-        ndi_r1.add(self._w_ndi_in_cb)
-        ndi_inner.add(ndi_r1)
-
-        ndi_r2 = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        ndi_r2.add(Gtk.Label(label="Out:"))
+        ndi_row.add(self._w_ndi_in_cb)
+        ndi_row.add(Gtk.Label(label="Out:"))
         self._w_ndi_out = Gtk.Entry()
         self._w_ndi_out.set_placeholder_text("stream name")
         self._w_ndi_out.set_text(self.route_name)
-        ndi_r2.add(self._w_ndi_out)
+        self._w_ndi_out.set_size_request(180, -1)
+        ndi_row.add(self._w_ndi_out)
         self._w_ndi_out_cb = Gtk.CheckButton(label="Enable")
         self._w_ndi_out_cb.set_active(self.route_enabled)
-        ndi_r2.add(self._w_ndi_out_cb)
-        ndi_inner.add(ndi_r2)
-
-        ndi.add(ndi_inner)
-        vbox.pack_start(ndi, False, False, 0)
-
-        skip_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        self._w_skip_cb = Gtk.CheckButton(label="Don't show again (skip to mixer next time)")
-        self._w_skip_cb.set_active(self._skip_welcome)
-        skip_row.add(self._w_skip_cb)
-        vbox.pack_start(skip_row, False, False, 0)
-
-        # --- Launch ---
-        btn_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        launch = Gtk.Button(label="Launch Mixer")
-        launch.get_style_context().add_class("mix-btn")
-        launch.connect("clicked", self._w_launch)
-        btn_row.pack_start(launch, True, True, 0)
-        vbox.pack_start(btn_row, False, False, 0)
+        ndi_row.add(self._w_ndi_out_cb)
+        vbox.pack_start(ndi_row, False, False, 0)
 
         self.window.show_all()
+
+        self._auto_select_primary()
+
+    def _auto_select_primary(self):
+        primary = None
+        for c in self.alsa_cards:
+            if "1824" in c["name"].lower() or "1824" in c["id"].lower():
+                primary = c
+                break
+        if primary is None:
+            for c in self.alsa_cards:
+                if not c["is_webcam"]:
+                    primary = c
+                    break
+        if primary is None and self.alsa_cards:
+            primary = self.alsa_cards[0]
+        if primary is not None:
+            self._w_selected = primary["hw"]
+            self._w_auto = True
+            btn = self._w_card_btns.get(primary["hw"])
+            if btn:
+                btn.set_active(True)
+            self._w_auto = False
+            self._refresh_agg_combo()
+            self._w_card_info.set_text(primary["label"])
 
     def _w_on_card_select(self, btn, hw):
         if btn.get_active():
@@ -514,18 +484,21 @@ class InterfaceApp:
             for b in self._w_card_btns.values():
                 if b != btn:
                     b.set_active(False)
-            if hw is None:
-                self._w_card_info.set_text("No card selected")
-            else:
-                for c in self.alsa_cards:
-                    if c["hw"] == hw:
-                        self._w_card_info.set_text(
-                            "hw: %s  |  %s  |  %s" % (c["hw"], c["name"], c["dev_name"]))
-                        break
+            self._refresh_agg_combo()
+            if not getattr(self, '_w_auto', False):
+                self._w_launch()
         else:
             if self._w_selected == hw:
                 self._w_selected = None
-                self._w_card_info.set_text("No card selected")
+
+    def _refresh_agg_combo(self):
+        self._w_link_combo.remove_all()
+        self._w_link_combo.append_text("None")
+        for c in self.alsa_cards:
+            if c["hw"] == self._w_selected:
+                continue
+            self._w_link_combo.append_text(c["label"])
+        self._w_link_combo.set_active(0)
 
     def _w_add_wire(self, *_):
         src_names = ["Pri", "Link"] + [c["id"] for c in self.alsa_cards]
@@ -553,15 +526,11 @@ class InterfaceApp:
 
     def _w_customize_cards(self, *_):
         cfg = _load_card_cfg()
-        dlg = Gtk.Dialog(
-            title="Customize Cards", parent=self.window, flags=0,
-            buttons=(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
-                     Gtk.STOCK_OK, Gtk.ResponseType.OK))
+        dlg = Gtk.Dialog(title="Customize Cards", parent=self.window, flags=0)
+        dlg.add_buttons("Cancel", Gtk.ResponseType.CANCEL, "OK", Gtk.ResponseType.OK)
         dlg.set_default_size(520, 380)
         box = dlg.get_content_area()
-        lbl = Gtk.Label(
-            "Pick a color, name, and enable/disable the mic for each card.\n"
-            "Webcam mics are disabled by default.")
+        lbl = Gtk.Label(label="Pick a color, name, and enable/disable the mic for each card.\nWebcam mics are disabled by default.")
         lbl.set_line_wrap(True)
         box.add(lbl)
         rows = []
@@ -577,7 +546,6 @@ class InterfaceApp:
             rgba = Gdk.RGBA()
             rgba.parse(cur_color)
             cb.set_rgba(rgba)
-            cb.set_use_alpha(False)
             cb.set_title("Color for %s" % c["id"])
             row.add(cb)
             entry = Gtk.Entry()
@@ -622,8 +590,9 @@ class InterfaceApp:
                     self.selected_card_hw = None
                     print("webcam mic disabled - card rejected:", c["label"])
                     break
+        agg_cards = [c for c in self.alsa_cards if c["hw"] != self.selected_card_hw]
         link_idx = self._w_link_combo.get_active()
-        self.linked_card_hw = None if link_idx <= 0 else self.alsa_cards[link_idx - 1]["hw"]
+        self.linked_card_hw = None if link_idx <= 0 else agg_cards[link_idx - 1]["hw"]
         if self.linked_card_hw:
             for c in self.alsa_cards:
                 if c["hw"] == self.linked_card_hw and c["is_webcam"]:
@@ -646,8 +615,6 @@ class InterfaceApp:
         self.net_enabled = self._w_ndi_in_cb.get_active()
         self.route_name = self._w_ndi_out.get_text().strip()
         self.route_enabled = self._w_ndi_out_cb.get_active()
-        self._skip_welcome = self._w_skip_cb.get_active()
-
         self._save_preset()
 
         for c in self.window.get_children():
@@ -682,6 +649,7 @@ class InterfaceApp:
             self.state.counter = 1
             self.dev_error = None
             self.status_lbl.set_text("FADERS LIVE")
+            self._update_dev_label()
             self._poll_alive = True
             self._poll_thread = threading.Thread(
                 target=self._poll_loop, daemon=True)
@@ -694,11 +662,26 @@ class InterfaceApp:
             self.dev = None
             self.dev_error = str(e)
             self.status_lbl.set_text("WAITING FOR DEVICE...")
+            self._update_dev_label()
             if not self.cap_running:
                 self._start_capture()
                 self._start_capture2()
                 GLib.timeout_add(100, self._update_meters)
             return False
+
+    def _update_dev_label(self):
+        if self.dev is not None:
+            self.dev_lbl.set_markup(
+                '<span weight="bold" color="#50e080">Studio 1824c</span>')
+        elif self.selected_card_hw:
+            for c in self.alsa_cards:
+                if c["hw"] == self.selected_card_hw:
+                    self.dev_lbl.set_markup(
+                        '<span weight="bold" color="#7fb0ff">%s</span>' % c["name"])
+                    return
+            self.dev_lbl.set_markup('')
+        else:
+            self.dev_lbl.set_markup('')
 
     def _auto_reconnect(self):
         if self.dev is None:
@@ -745,9 +728,15 @@ class InterfaceApp:
         self.vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.window.add(self.vbox)
 
+        is_1824c = self._is_1824c()
+
         hb = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         hb.set_border_width(4)
         hb.get_style_context().add_class("header-bar")
+        self.dev_lbl = Gtk.Label()
+        self._update_dev_label()
+        self.dev_lbl.get_style_context().add_class("tiny")
+        hb.pack_start(self.dev_lbl, False, False, 8)
         self.status_lbl = Gtk.Label(
             label="FADERS LIVE" if self.dev else "BUTTONS ONLY (no USB)")
         self.status_lbl.get_style_context().add_class("tiny")
@@ -758,12 +747,13 @@ class InterfaceApp:
         save = Gtk.Button(label="Save")
         save.connect("clicked", lambda *_: self._save_preset())
         hb.pack_end(save, False, False, 0)
-        reconnect = Gtk.Button(label="Reconnect")
-        reconnect.connect("clicked", self._on_reconnect)
-        hb.pack_end(reconnect, False, False, 0)
-        self.test_btn = Gtk.ToggleButton(label="Test Mode")
-        self.test_btn.connect("toggled", self._on_test_mode)
-        hb.pack_end(self.test_btn, False, False, 0)
+        if is_1824c:
+            reconnect = Gtk.Button(label="Reconnect")
+            reconnect.connect("clicked", self._on_reconnect)
+            hb.pack_end(reconnect, False, False, 0)
+            self.test_btn = Gtk.ToggleButton(label="Test Mode")
+            self.test_btn.connect("toggled", self._on_test_mode)
+            hb.pack_end(self.test_btn, False, False, 0)
         ph = Gtk.CheckButton(label="Peak Hold")
         ph.connect("toggled", self._on_peak_hold)
         hb.pack_end(ph, False, False, 0)
@@ -809,85 +799,143 @@ class InterfaceApp:
 
         self.vbox.pack_start(status_bar, False, False, 0)
 
-        fp = Gtk.Frame(label="Front Panel")
-        fp_grid = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        fp_grid.set_border_width(8)
-        for bid, label in BUTTON_DEFS:
-            t = Gtk.ToggleButton(label=label)
-            t.connect("toggled", self._on_button, bid)
-            self.button_toggles[bid] = t
-            fp_grid.add(t)
-        fp.add(fp_grid)
-        self.vbox.pack_start(fp, False, False, 0)
+        if is_1824c:
+            fp = Gtk.Frame(label="Front Panel")
+            fp_grid = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            fp_grid.set_border_width(8)
+            for bid, label in BUTTON_DEFS:
+                t = Gtk.ToggleButton(label=label)
+                t.connect("toggled", self._on_button, bid)
+                self.button_toggles[bid] = t
+                fp_grid.add(t)
+            fp.add(fp_grid)
+            self.vbox.pack_start(fp, False, False, 0)
 
-        dev = Gtk.Frame(label="Device")
-        dev_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        dev_vbox.set_border_width(8)
+        if is_1824c:
+            dev = Gtk.Frame(label="Device")
+            dev_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+            dev_vbox.set_border_width(8)
+            dev_row1 = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            dev_row1.add(Gtk.Label(label="Clock:"))
+            self.clock_combo = Gtk.ComboBoxText()
+            for n in ("Internal", "S/PDIF", "ADAT"):
+                self.clock_combo.append_text(n)
+            try:
+                cn = ic.alsa_numid(ic.CLOCK_NAME)
+                cur = ic.alsa_enum_get(cn) or 0
+                self.clock_combo.set_active(cur)
+            except Exception:
+                self.clock_combo.set_active(0)
+            self.clock_combo.connect("changed", self._on_clock)
+            dev_row1.add(self.clock_combo)
+            dev_row1.add(Gtk.Label(label="Sample Rate:"))
+            self.rate_combo = Gtk.ComboBoxText()
+            for r in (44100, 48000, 96000, 192000):
+                self.rate_combo.append_text("%d" % r)
+            self.rate_combo.set_active(1)
+            self.rate_combo.connect("changed", self._on_rate)
+            dev_row1.add(self.rate_combo)
+            dev_vbox.add(dev_row1)
+            dev.add(dev_vbox)
+            self.vbox.pack_start(dev, False, False, 0)
 
-        dev_row1 = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        dev_row1.add(Gtk.Label(label="Clock:"))
-        self.clock_combo = Gtk.ComboBoxText()
-        for n in ("Internal", "S/PDIF", "ADAT"):
-            self.clock_combo.append_text(n)
-        try:
-            cn = ic.alsa_numid(ic.CLOCK_NAME)
-            cur = ic.alsa_enum_get(cn) or 0
-            self.clock_combo.set_active(cur)
-        except Exception:
-            self.clock_combo.set_active(0)
-        self.clock_combo.connect("changed", self._on_clock)
-        dev_row1.add(self.clock_combo)
-        dev_row1.add(Gtk.Label(label="Sample Rate:"))
-        self.rate_combo = Gtk.ComboBoxText()
-        for r in (44100, 48000, 96000, 192000):
-            self.rate_combo.append_text("%d" % r)
-        self.rate_combo.set_active(1)
-        self.rate_combo.connect("changed", self._on_rate)
-        dev_row1.add(self.rate_combo)
-        dev_vbox.add(dev_row1)
-
-        dev.add(dev_vbox)
-        self.vbox.pack_start(dev, False, False, 0)
-
-        mx = Gtk.Frame(label="Monitor Mix")
-        mx_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        mx_vbox.set_border_width(8)
-        mx_grid = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        for b in range(4):
-            t = Gtk.ToggleButton(label=BUS_NAMES[b])
-            t.get_style_context().add_class("mix-btn")
-            t.connect("toggled", self._on_mix_select, b)
-            self.mix_buttons.append(t)
-            mx_grid.add(t)
-        mx_vbox.add(mx_grid)
-
-        copy_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        copy_row.add(Gtk.Label(label="Copy:"))
-        self.src_combo = Gtk.ComboBoxText()
-        for n in BUS_NAMES:
-            self.src_combo.append_text(n)
-        self.src_combo.set_active(0)
-        copy_row.add(self.src_combo)
-        copy_row.add(Gtk.Label(label="\u2192"))
-        self.dst_combo = Gtk.ComboBoxText()
-        for n in BUS_NAMES:
-            self.dst_combo.append_text(n)
-        self.dst_combo.set_active(1)
-        copy_row.add(self.dst_combo)
-        cb = Gtk.Button(label="Copy Mix")
-        cb.connect("clicked", self._copy_mix)
-        copy_row.add(cb)
-        mx_vbox.add(copy_row)
-        mx.add(mx_vbox)
-        self.vbox.pack_start(mx, False, False, 0)
+        else:
+            self._build_generic_controls()
 
         self.strip_area = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         self.strip_area.set_border_width(8)
         self.vbox.pack_start(self.strip_area, True, True, 0)
 
         self._build_strips(0)
-        self.mix_buttons[0].set_active(True)
+        if is_1824c and self.mix_buttons:
+            self.mix_buttons[0].set_active(True)
         self.window.show_all()
+
+    def _is_1824c(self):
+        if self.dev is not None:
+            return True
+        if self.selected_card_hw:
+            for c in self.alsa_cards:
+                if c["hw"] == self.selected_card_hw:
+                    return "1824" in c["name"].lower() or "1824" in c["id"].lower()
+        return False
+
+    def _build_generic_controls(self):
+        card = None
+        if self.selected_card_hw:
+            for c in self.alsa_cards:
+                if c["hw"] == self.selected_card_hw:
+                    card = c
+                    break
+        if not card:
+            return
+        grp = Gtk.Frame(label="ALSA Controls — %s" % card["name"])
+        inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        inner.set_border_width(8)
+        try:
+            out = subprocess.run(
+                ["amixer", "-c", str(card["card"]), "contents"],
+                capture_output=True, text=True, timeout=3
+            ).stdout
+            for block in out.split("numid=")[1:]:
+                lines = block.strip().split("\n")
+                name_m = re.search(r"name='([^']+)'", lines[0])
+                if not name_m:
+                    continue
+                cname = name_m.group(1)
+                if "Volume" in cname or "Gain" in cname:
+                    val_m = re.search(r": values=(\d+)", block)
+                    if val_m:
+                        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+                        row.add(Gtk.Label(label=cname[:30]))
+                        adj = Gtk.Adjustment(value=int(val_m.group(1)),
+                                             lower=0, upper=255, step_increment=1)
+                        sc = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=adj)
+                        sc.set_size_request(200, -1)
+                        numid_m = re.search(r"numid=(\d+)", "numid=" + block)
+                        numid = int(numid_m.group(1)) if numid_m else 0
+                        sc.connect("value-changed", self._on_generic_vol, card, numid)
+                        row.add(sc)
+                        inner.add(row)
+                elif "Switch" in cname:
+                    val_m = re.search(r": values=(\w+)", block)
+                    if val_m:
+                        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+                        row.add(Gtk.Label(label=cname[:30]))
+                        sw = Gtk.CheckButton()
+                        sw.set_active(val_m.group(1) == "on")
+                        numid_m = re.search(r"numid=(\d+)", "numid=" + block)
+                        numid = int(numid_m.group(1)) if numid_m else 0
+                        sw.connect("toggled", self._on_generic_sw, card, numid)
+                        row.add(sw)
+                        inner.add(row)
+        except Exception as e:
+            inner.add(Gtk.Label(label="Could not read ALSA controls: %s" % str(e)))
+        if len(inner.get_children()) > 0:
+            grp.add(inner)
+            self.vbox.pack_start(grp, False, False, 0)
+
+    def _on_generic_vol(self, sc, card, numid):
+        val = int(sc.get_value())
+        try:
+            subprocess.run(
+                ["amixer", "-c", str(card["card"]),
+                 "cset", "numid=%d" % numid, str(val)],
+                capture_output=True, timeout=3
+            )
+        except Exception:
+            pass
+
+    def _on_generic_sw(self, sw, card, numid):
+        val = "on" if sw.get_active() else "off"
+        try:
+            subprocess.run(
+                ["amixer", "-c", str(card["card"]),
+                 "cset", "numid=%d" % numid, val],
+                capture_output=True, timeout=3
+            )
+        except Exception:
+            pass
 
     def _make_fader(self, initial, handler, *args):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=1)
@@ -1405,6 +1453,7 @@ class InterfaceApp:
     def _on_disconnect(self):
         self.dev = None
         self.status_lbl.set_text("DEVICE DISCONNECTED - reconnecting...")
+        self._update_dev_label()
         if not self.cap_running:
             self._start_capture()
             self._start_capture2()
